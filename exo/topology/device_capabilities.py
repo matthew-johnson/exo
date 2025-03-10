@@ -178,7 +178,7 @@ async def linux_device_capabilities() -> DeviceCapabilities:
   from tinygrad import Device
 
   if DEBUG >= 2: print(f"tinygrad {Device.DEFAULT=}")
-  if Device.DEFAULT == "CUDA" or Device.DEFAULT == "NV" or Device.DEFAULT == "GPU":
+  if Device.DEFAULT == "CUDA" or Device.DEFAULT == "NV":
     import pynvml
 
     pynvml.nvmlInit()
@@ -196,6 +196,50 @@ async def linux_device_capabilities() -> DeviceCapabilities:
       chip=gpu_name,
       memory=gpu_memory_info.total // 2**20,
       flops=CHIP_FLOPS.get(gpu_name, DeviceFlops(fp32=0, fp16=0, int8=0)),
+    )
+  elif Device.DEFAULT == "GPU":
+    try:
+      import pyopencl as cl
+      platforms = cl.get_platforms()
+      for platform in platforms:
+        devices = platform.get_devices(device_type=cl.device_type.GPU)
+        if devices:
+          device = devices[0]  # Use first GPU device found
+          gpu_name = f"{platform.name} {device.name}".upper()
+          gpu_memory = device.global_mem_size
+          
+          # Get compute capabilities - convert to TFLOPS
+          max_compute_units = device.max_compute_units
+          max_clock_freq = device.max_clock_frequency  # MHz
+          
+          # Rough estimate of FLOPS:
+          # units * freq(GHz) * operations_per_cycle * 2(for fused multiply-add)
+          base_tflops = (max_compute_units * (max_clock_freq / 1000) * 8 * 2) / 1000
+          
+          if DEBUG >= 2:
+            print(f"OpenCL device {gpu_name=} memory={gpu_memory // 2**20}MB")
+            print(f"Compute units: {max_compute_units}, Clock: {max_clock_freq}MHz")
+
+          return DeviceCapabilities(
+            model=f"Linux Box ({gpu_name})",
+            chip=gpu_name,
+            memory=gpu_memory // 2**20,  # Convert to MB
+            flops=DeviceFlops(
+              fp32=base_tflops,
+              fp16=base_tflops * 2,  # Typically 2x FP32
+              int8=base_tflops * 4,   # Typically 4x FP32
+            ),
+          )
+    except Exception as e:
+      if DEBUG >= 2:
+        print(f"Error detecting OpenCL device: {e}")
+      pass
+
+    return DeviceCapabilities(
+      model=f"Linux Box {Device.DEFAULT}",
+      chip="Unknown Chip",
+      memory=psutil.virtual_memory().total // 2**20,
+      flops=DeviceFlops(fp32=0, fp16=0, int8=0),
     )
   elif Device.DEFAULT == "AMD":
     import pyamdgpuinfo

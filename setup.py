@@ -41,6 +41,7 @@ extras_require = {
   "windows": ["pywin32==308",],
   "nvidia-gpu": ["nvidia-ml-py==12.560.30",],
   "amd-gpu": ["pyrsmi==0.2.0"],
+  "intel-gpu": ["pyopencl==2025.1"],
 }
 
 # Check if running on macOS with Apple Silicon
@@ -73,6 +74,15 @@ def _add_gpu_requires():
     if out.returncode == 0:
       install_requires.extend(extras_require["amd-gpu"])
   finally:
+    pass
+    
+  # Add Intel-GPU
+  try:
+    # Check for Intel GPU using clinfo, filtering for Intel GPU devices
+    out = subprocess.run(['clinfo', '|', 'grep', '-i', 'intel.*graphics'], shell=True, text=True, capture_output=True, check=False)
+    if out.returncode == 0 and any('intel' in line.lower() and 'graphics' in line.lower() for line in out.stdout.splitlines()):
+      install_requires.extend(extras_require["intel-gpu"])
+  except Exception:
     pass
 
 
