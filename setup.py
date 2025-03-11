@@ -78,10 +78,17 @@ def _add_gpu_requires():
     
   # Add Intel-GPU
   try:
-    # Check for Intel GPU using clinfo, filtering for Intel GPU devices
-    out = subprocess.run(['clinfo', '|', 'grep', '-i', 'intel.*graphics'], shell=True, text=True, capture_output=True, check=False)
-    if out.returncode == 0 and any('intel' in line.lower() and 'graphics' in line.lower() for line in out.stdout.splitlines()):
-      install_requires.extend(extras_require["intel-gpu"])
+    # Check for Intel GPU using clinfo
+    out = subprocess.run(['clinfo', '--list'], shell=True, text=True, capture_output=True, check=False)
+    if out.returncode == 0:
+      # Look specifically for Intel GPU devices
+      intel_gpu_found = False
+      for line in out.stdout.splitlines():
+        if ('Intel' in line and 'Graphics' in line) or ('Arc' in line):
+          intel_gpu_found = True
+          break
+      if intel_gpu_found:
+        install_requires.extend(extras_require["intel-gpu"])
   except Exception:
     pass
 
