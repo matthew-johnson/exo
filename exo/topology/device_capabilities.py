@@ -205,7 +205,7 @@ async def linux_device_capabilities() -> DeviceCapabilities:
         devices = platform.get_devices(device_type=cl.device_type.GPU)
         if devices:
           device = devices[0]  # Use first GPU device found
-          gpu_name = f"{platform.name} {device.name}".upper()
+          gpu_name = f"{device.name}".upper()
           gpu_memory = device.global_mem_size
           
           # Get compute capabilities - convert to TFLOPS
