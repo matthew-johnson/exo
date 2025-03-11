@@ -235,12 +235,6 @@ async def linux_device_capabilities() -> DeviceCapabilities:
         print(f"Error detecting OpenCL device: {e}")
       pass
 
-    return DeviceCapabilities(
-      model=f"Linux Box {Device.DEFAULT}",
-      chip="Unknown Chip",
-      memory=psutil.virtual_memory().total // 2**20,
-      flops=DeviceFlops(fp32=0, fp16=0, int8=0),
-    )
   elif Device.DEFAULT == "AMD":
     import pyamdgpuinfo
 
